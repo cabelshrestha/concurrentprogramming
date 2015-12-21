@@ -1,0 +1,295 @@
+#INCLUDE "protocol.occ"
+#INCLUDE "course.module"
+#INCLUDE "display.occ"
+
+VAL INT N.REINDEER IS 9:
+VAL INT G.REINDEER IS N.REINDEER:
+
+VAL INT N.ELVES IS 10:
+VAL INT G.ELVES IS 3:
+
+VAL INT HOLIDAY.TIME IS 100000:
+VAL INT WORKING.TIME IS 200000:
+VAL INT DELIVERY.TIME IS 100000:
+VAL INT CONSULTATION.TIME IS 200000:
+
+PROC p.barrier.knock (VAL INT n, CHAN BOOL a?, b?, knock!)
+  WHILE TRUE
+    SEQ
+      SEQ i = 0 FOR n
+        BOOL any:
+        a ? any
+      knock ! TRUE
+      SEQ i = 0 FOR n
+        BOOL any:
+        b ? any
+:
+
+PROC p.barrier (VAL INT n, CHAN BOOL a?, b?)
+  WHILE TRUE
+    SEQ
+      SEQ i = 0 FOR n
+        BOOL any:
+        a ? any
+      SEQ i = 0 FOR n
+        BOOL any:
+        b ? any
+:
+
+PROC sync (SHARED CHAN BOOL a!, b!)
+  SEQ
+    CLAIM a!
+      a ! TRUE
+    CLAIM b!
+      b ! TRUE
+:
+
+
+PROC reindeer (VAL INT id, seed, BARRIER just.reindeer, santa.reindeer,
+               SHARED CHAN INT to.santa!, SHARED CHAN REINDEER.MSG report!)
+  INITIAL INT my.seed IS seed:
+  TIMER tim:
+  INT t, wait:
+  SEQ
+    SEQ i = 0 FOR 1000
+      wait, my.seed := random (HOLIDAY.TIME, my.seed)
+    WHILE TRUE
+
+      -- your code goes here
+      SEQ
+        -- A reindeer starts out by reporting that it is on holiday.
+        CLAIM report!
+          report ! holiday; id
+
+        -- After a random amount of time it returns to North Pole.
+        wait, my.seed := random (HOLIDAY.TIME, my.seed)
+        tim ? t
+        tim ? AFTER t PLUS wait
+
+        -- After returning from holiday, a deer reports itself ready.
+        CLAIM report!
+          report ! deer.ready; id
+
+        -- It waits for all other deers to return from holiday.
+        SYNC just.reindeer
+
+        -- Once that happens, it sends its id to Santa.
+        CLAIM to.santa!
+          to.santa ! id
+
+	      -- Waits for santa to harness all.
+        SYNC santa.reindeer
+
+	      -- After all deers are harnessed, it reports delivering toys.
+        CLAIM report!
+          report ! deliver; id
+
+        -- Waits for Santa and other deers to finish work
+        SYNC santa.reindeer
+
+        -- After all are done delivering, deer reports that work is done.
+        CLAIM report!
+          report ! deer.done; id
+
+        -- Sends id to Santa to be unharnessed and go back to holiday.
+        CLAIM to.santa!
+          to.santa ! id
+:
+
+PROC elf (VAL INT id, seed,
+          SHARED CHAN BOOL elves.a!, elves.b!, santa.elves.a!, santa.elves.b!,
+          SHARED CHAN INT to.santa!, SHARED CHAN ELF.MSG report!)
+  INITIAL INT my.seed IS seed:
+  TIMER tim:
+  INT t, wait:
+  SEQ
+    SEQ i = 0 FOR 1000
+      wait, my.seed := random (HOLIDAY.TIME, my.seed)
+    WHILE TRUE
+      
+      -- your code goes here
+      SEQ
+        -- Elf starts out by reporting it is working.
+        CLAIM report!
+          report ! working; id
+
+        -- which it does(works) for a random amount of time.
+        wait, my.seed := random (WORKING.TIME, my.seed)
+        tim ? t
+        tim ? AFTER t PLUS wait
+
+        -- When an elf wants to consult with Santa, it reports ready.
+        CLAIM report!
+          report ! elf.ready; id
+
+        -- Sync on partial barrier to wait for 2 more elves to be ready.
+        sync(elves.a!, elves.b!)
+
+        -- After other 2 elves are at Santa's door, it sends id to Santa
+        CLAIM to.santa!
+          to.santa ! id
+
+        -- Sync with santa and other two elves 
+        sync(santa.elves.a!, santa.elves.b!)
+
+        -- Reports consulting with Santa
+        CLAIM report!
+          report ! consult; id
+
+        -- Wait for all elves to finish consultation
+        sync(santa.elves.a!, santa.elves.b!)
+
+        -- After all are done, elf reports it is done
+        CLAIM report!
+          report ! elf.done; id
+	
+        -- Sends id to Santa as a goodbye greeting and goes back to work
+        CLAIM to.santa!
+          to.santa ! id
+:
+
+PROC santa (VAL INT seed,
+            CHAN BOOL knock?, CHAN INT from.reindeer?, from.elf?, BARRIER santa.reindeer,
+            SHARED CHAN BOOL santa.elves.a!, santa.elves.b!, SHARED CHAN SANTA.MSG report!)
+  INITIAL INT my.seed IS seed:
+  TIMER tim:
+  INT t, wait:
+  SEQ
+    SEQ i = 0 FOR 1000
+      wait, my.seed := random (DELIVERY.TIME, my.seed)
+    WHILE TRUE
+      -- your code goes here
+      PRI ALT
+        INT reindeer.id:
+        -- if one reindeer sends id, santa knows all are ready.
+        from.reindeer ? reindeer.id
+          SEQ
+            -- reports reindeer ready
+            CLAIM report!
+              report ! reindeer.ready
+
+            -- harnesses the first reindeer
+            CLAIM report!
+              report ! harness; reindeer.id
+
+            -- goes to harness rest of the reindeers (9-1)
+            SEQ i = 0 FOR N.REINDEER - 1
+              SEQ
+                from.reindeer ? reindeer.id
+                CLAIM report!
+                  report ! harness; reindeer.id
+
+            -- Waits for all reindeers to be harnessed
+            SYNC santa.reindeer
+
+            -- Santa and reindeers start delivering
+            CLAIM report!
+              report ! mush.mush
+
+            -- delivering presents take random amount of time
+            wait, my.seed := random (DELIVERY.TIME, my.seed)
+            tim ? t
+            tim ? AFTER t PLUS wait
+
+            -- delivery done
+            CLAIM report!
+              report ! woah
+            
+            SYNC santa.reindeer
+
+            -- santa unharnesses all reindeers so
+            SEQ i = 0 FOR N.REINDEER
+              SEQ
+                -- using extended rendezvous (??) so that reindeer always goes back to holiday only after santa has finised unharnessing
+                from.reindeer ?? reindeer.id
+                  CLAIM report!
+                    report ! unharness; reindeer.id
+                    
+        BOOL knock.bool:
+        INT elf.id:
+
+        -- if knock is recieved, santa knows all 3 elves are at the door
+        knock ? knock.bool         
+          SEQ
+            -- reports elves are ready
+            CLAIM report!
+              report ! elves.ready
+
+            -- greets all elves
+            SEQ i = 0 FOR G.ELVES
+              SEQ
+                from.elf ? elf.id
+                CLAIM report!
+                  report ! greet; elf.id
+
+            sync(santa.elves.a!, santa.elves.b!)    
+
+            CLAIM report!
+              report ! consulting
+
+            -- consultation takes random amount of time
+            wait, my.seed := random (CONSULTATION.TIME, my.seed)
+            tim ? t
+            tim ? AFTER t PLUS wait
+
+            CLAIM report!
+              report ! santa.done
+
+            sync(santa.elves.a!, santa.elves.b!)
+
+            SEQ i = 0 FOR G.ELVES
+              SEQ
+                -- using extended rendezvous (??) so that elf always goes back to work only after santa says goodbye
+                from.elf ?? elf.id
+                  CLAIM report!
+                    report ! goodbye; elf.id
+
+        -- santa goes back to sleep
+            
+
+:
+
+PROC santa.claus.problem (CHAN BYTE screen!)
+
+  TIMER tim:
+  INT seed:
+  SEQ
+    tim ? seed
+    seed :=  (seed >> 2) + 42
+    
+    BARRIER just.reindeer, santa.reindeer:
+    SHARED ! CHAN BOOL elves.a, elves.b:
+    CHAN BOOL knock:    
+    SHARED ! CHAN BOOL santa.elves.a, santa.elves.b:
+    SHARED ! CHAN INT reindeer.santa, elf.santa:
+    SHARED ! CHAN MESSAGE report:
+    
+    PAR
+
+      -- your code goes here
+
+      -- start display process
+      display(report? , screen!)
+
+      -- start partial knock barrier for the 3 elves to sync on
+      p.barrier.knock(G.ELVES, elves.a?, elves.b?, knock!)
+
+      -- start partial barrier for 3 elves and santa to sync on
+      p.barrier(G.ELVES+1, santa.elves.a?, santa.elves.b?)
+      
+      -- start elf processes
+      PAR i = 0 FOR N.ELVES
+        elf(i, seed, elves.a!, elves.b!, santa.elves.a!, santa.elves.b!, elf.santa!, report!)
+
+      -- start santa and reindeer processes and enroll to respective full barriers      
+      PAR ENROLL santa.reindeer
+        --start santa process
+        santa(seed, knock?, reindeer.santa?, elf.santa?, santa.reindeer, santa.elves.a!, santa.elves.b!, report!)
+
+        -- start reindeer process. enroll to both barriers
+        PAR i=0 FOR N.REINDEER ENROLL just.reindeer, santa.reindeer
+          reindeer(i, seed, just.reindeer, santa.reindeer, reindeer.santa!, report!)
+
+
+:
+

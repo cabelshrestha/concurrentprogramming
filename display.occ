@@ -1,0 +1,77 @@
+PROC display(CHAN MESSAGE in?, CHAN BYTE screen!)
+  WHILE TRUE
+    INT id:
+    in ? CASE
+      holiday; id
+        SEQ
+          out.string ("*t*t*t*t*t*tReindeer ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (": on holiday ... wish you were here, :)*c*n", 0, screen!)
+      deer.ready; id
+        SEQ
+          out.string ("*t*t*t*t*t*tReindeer ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (": back from holiday ... ready for work, :(*c*n", 0, screen!)
+      deliver; id
+        SEQ
+          out.string ("*t*t*t*t*t*tReindeer ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (": delivering toys ... la-di-da-di-da-di-da, :)*c*n", 0, screen!)
+      deer.done; id
+        SEQ
+          out.string ("*t*t*t*t*t*tReindeer: ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (": all toys delivered ... want a holiday, :(*c*n", 0, screen!)
+      working; id
+        SEQ
+          out.string ("*t*t*tElf ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (": working, :)*c*n", 0, screen!)
+      elf.ready; id
+        SEQ
+          out.string ("*t*t*tElf ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (": need to consult santa, :(*c*n", 0, screen!)
+      consult; id
+        SEQ
+          out.string ("*t*t*tElf: ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (": about these toys ... ???*c*n", 0, screen!)
+      elf.done; id
+        SEQ
+          out.string ("*t*t*tElf ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (": OK ... we*'ll build it, bye ... :(*c*n", 0, screen!)
+      reindeer.ready
+        out.string ("Santa: Ho-ho-ho ... the reindeer are back!*c*n", 0, screen!)
+      harness; id
+        SEQ
+          out.string ("Santa: harnessing reindeer ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (" ... *c*n", 0, screen!)
+      mush.mush
+        out.string ("Santa: mush mush ...*c*n", 0, screen!)
+      woah
+        out.string ("Santa: woah ... we*'re back home!*c*n", 0, screen!)
+      unharness; id
+        SEQ
+          out.string ("Santa: un-harnessing reindeer ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (" ... *c*n", 0, screen!)
+      elves.ready
+        out.string ("Santa: Ho-ho-ho ... some elves are here!*c*n", 0, screen!)
+      greet; id
+        SEQ
+          out.string ("Santa: hello elf ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (" ... *c*n", 0, screen!)
+      consulting
+        out.string ("Santa: consulting with elves ...*c*n", 0, screen!)
+      santa.done
+        out.string ("OK, all done - thanks!*c*n", 0, screen!)
+      goodbye; id
+        SEQ
+          out.string ("Santa: goodbye elf ", 0, screen!)
+          out.int (id, 0, screen!)
+          out.string (" ... *c*n", 0, screen!)
+:

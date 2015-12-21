@@ -1,0 +1,31 @@
+PROTOCOL REINDEER.MSG
+  CASE
+    holiday; INT
+    deer.ready; INT
+    deliver; INT
+    deer.done; INT
+:
+
+PROTOCOL ELF.MSG
+  CASE
+    working; INT
+    elf.ready; INT
+    consult; INT
+    elf.done; INT
+:
+
+PROTOCOL SANTA.MSG
+  CASE
+    reindeer.ready
+    harness; INT
+    mush.mush
+    woah
+    unharness; INT
+    elves.ready
+    greet; INT
+    consulting
+    santa.done
+    goodbye; INT
+:
+
+PROTOCOL MESSAGE EXTENDS REINDEER.MSG, ELF.MSG, SANTA.MSG: 
